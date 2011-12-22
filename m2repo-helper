@@ -13,24 +13,20 @@ function set_import_values() {
 
     while true; do 
         echo "Verify the following values are correct:"
-        echo " 1) File:     $JARFILE"
-        echo " 2) Group ID: $GROUPID"
-        echo " 3) Artifact: $ARTIFACTID"
-        echo " 4) Version:  $VERSION"
-        echo " 5) Packaging: $PACKAGING"
-        #echo " 6) Local Repo: $LOCALREPO"
+        echo " 1) Group ID: $GROUPID"
+        echo " 2) Artifact: $ARTIFACTID"
+        echo " 3) Version:  $VERSION"
+        echo " 4) Packaging: $PACKAGING"
 
-        echo "To make changes, enter the line number and the new value(i.e. '1 newjarfile.jar'): "
+        echo "To make changes, enter the line number and the new value(i.e. '3 1.0'): "
         read INPUT
         selection=${INPUT[@]:0:1}
         value=${INPUT[@]:1}
         case "$selection" in
-            1) JARFILE=$value;;
-            2) GROUPID=$value;;
-            3) ARTIFACTID=$value;;
-            4) VERSION=$value;;
-            5) PACKAGING=$value;;
-            #6) LOCALREPO=$value;;
+            1) GROUPID=$value;;
+            2) ARTIFACTID=$value;;
+            3) VERSION=$value;;
+            4) PACKAGING=$value;;
             *) break;;
         esac
     done
@@ -53,8 +49,14 @@ function install() {
     artifactId=$(expr match "$fullclass" '\w*\/\w*\/\(\w*\)\/.*')
     
     set_import_values $jarfile $groupId $artifactId $version 
+    arguments="-Dfile=$JARFILE -DgroupId=$GROUPID -DartifactId=$ARTIFACTID -Dversion=$VERSION -Dpackaging=$PACKAGING"
+    if [ 'java-source' = "$PACKAGING" ]; then
+        arguments="$arguments -DgeneratePom=false"
+    fi
 
-    mvn install:install-file -Dfile=$JARFILE -DgroupId=$GROUPID -DartifactId=$ARTIFACTID -Dversion=$VERSION -Dpackaging=$PACKAGING
+    echo "Installing $jarfile with the arguments $arguments"
+
+    mvn install:install-file $arguments
 }
 
 function search() {
