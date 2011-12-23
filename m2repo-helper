@@ -1,24 +1,28 @@
 #!/bin/bash
 
 function usage () {
-   echo "$0 [-i jar2install-version.jar] [-s (search for groupid|artifactId)]"
+echo "$0 search | install jarfile(s)"
 }
 
 function set_import_values() {
 
-    JARFILE=$1
-    GROUPID=$2
-    ARTIFACTID=$3
-    VERSION=$4
+    GROUPID=$1
+    ARTIFACTID=$2
+    VERSION=$3
 
     while true; do 
+        clear
         echo "Verify the following values are correct:"
+        echo " JAR: $JARFILE"
+        if [ -n "$JAVADOC" ]; then echo " JavaDoc: |$JAVADOC|"; fi
+        if [ -n "$SOURCEFILE" ]; then echo " Source: $SOURCEFILE"; fi
+        echo " ----------------------------------------------"
         echo " 1) Group ID: $GROUPID"
         echo " 2) Artifact: $ARTIFACTID"
         echo " 3) Version:  $VERSION"
         echo " 4) Packaging: $PACKAGING"
 
-        echo "To make changes, enter the line number and the new value(i.e. '3 1.0'): "
+        echo "To make changes, enter the line number and the new value(i.e. '3 1.0') or Ctrl-c to cancel: "
         read INPUT
         selection=${INPUT[@]:0:1}
         value=${INPUT[@]:1}
@@ -33,30 +37,52 @@ function set_import_values() {
 
 }
 
+function set_file_list() {
+    until [ -z $1 ]; do
+        if [ 0 -lt $(expr match "$1" '.*-sources\.jar') ]; then
+            SOURCEFILE=$1
+        elif [ 0 -lt $(expr match "$1" '.*-javadoc\.jar') ]; then
+            JAVADOC=$1
+        else
+            JARFILE=$1
+        fi
+        shift
+    done
+            
+}
+
 PACKAGING="jar"
 LOCALREPO="~/.m2/repository"
 JARFILE=""
+JAVADOC=""
+SOURCEFILE=""
 GROUPID=""
 ARTIFACTID=""
 VERSION=""
 
 function install() {
-    jarfile=$1;
-    version=$(expr match "$jarfile" '.*-\(.*\)\.jar')
-    fullclass=$(jar -tf "$jarfile" | tail -n 1)
+    set_file_list $@
+    
+    version=$(expr match "$JARFILE" '.*-\(.*\)\.jar')
+    fullclass=$(jar -tf "$JARFILE" | grep "\.class" | tail -n 1)
     groupId=$(expr match "$fullclass" '\(\w*\/\w*\)\/.*')
     groupId=${groupId/\//.}
     artifactId=$(expr match "$fullclass" '\w*\/\w*\/\(\w*\)\/.*')
     
-    set_import_values $jarfile $groupId $artifactId $version 
+    set_import_values $groupId $artifactId $version 
     arguments="-Dfile=$JARFILE -DgroupId=$GROUPID -DartifactId=$ARTIFACTID -Dversion=$VERSION -Dpackaging=$PACKAGING"
-    if [ 'java-source' = "$PACKAGING" ]; then
-        arguments="$arguments -DgeneratePom=false"
+
+    if [ -n "$JAVADOC" ]; then
+        arguments="$arguments -Djavadoc=$JAVADOC"
+    fi
+    if [ -n "$SOURCEFILE" ]; then
+        arguments="$arguments -Dsources=$SOURCEFILE"
     fi
 
-    echo "Installing $jarfile with the arguments $arguments"
+    echo "Installing $JARFILE with the arguments $arguments"
 
     mvn install:install-file $arguments
+
 }
 
 function search() {
@@ -64,14 +90,16 @@ function search() {
 }
 
 
-while getopts i:s:h flag
-do
-    case "$flag" in
-        i) install $OPTARG;;
-        s) search $OPTARG;;
-        h) usage;exit 0;;
-        *) usage;exit 1;;
-    esac
-done
+if [ 'function' != "$(type -t $1)" ]; then
+    echo "$1 is not a valid action"
+    usage
+    exit 1
+elif [ ! -f "$2" ]; then
+    echo "$2 is not a valid file"
+    usage
+    exit 1
+fi
 
-
+command=$1
+shift
+$command $@
