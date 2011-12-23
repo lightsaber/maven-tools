@@ -14,7 +14,7 @@ function set_import_values() {
         clear
         echo "Verify the following values are correct:"
         echo " JAR: $JARFILE"
-        if [ -n "$JAVADOC" ]; then echo " JavaDoc: |$JAVADOC|"; fi
+        if [ -n "$JAVADOC" ]; then echo " JavaDoc: $JAVADOC"; fi
         if [ -n "$SOURCEFILE" ]; then echo " Source: $SOURCEFILE"; fi
         echo " ----------------------------------------------"
         echo " 1) Group ID: $GROUPID"
